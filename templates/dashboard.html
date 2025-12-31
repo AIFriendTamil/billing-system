@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Dashboard</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="exportData()">Export Data</button>
+        </div>
+        <div class="input-group input-group-sm">
+            <span class="input-group-text bg-white"><i class="fas fa-calendar"></i></span>
+            <input type="text" id="globalDateRange" class="form-control" placeholder="Select Date Range">
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 my-2">
+    <!-- Stats Cards -->
+    <div class="col-md-4">
+        <div class="card p-3 h-100 shadow-sm border-0 bg-primary text-white dashboard-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <p class="mb-1 opacity-75">Total Revenue</p>
+                    <h3 class="fw-bold m-0 counter" data-target="{{ total_revenue }}">₹{{ total_revenue }}</h3>
+                </div>
+                <div class="stats-card-icon fs-1 opacity-50">
+                    <i class="fas fa-file-invoice-dollar"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card p-3 h-100 shadow-sm border-0 bg-success text-white dashboard-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <p class="mb-1 opacity-75">Total Orders</p>
+                    <h3 class="fw-bold m-0 counter" data-target="{{ total_orders }}">{{ total_orders }}</h3>
+                </div>
+                <div class="stats-card-icon fs-1 opacity-50">
+                    <i class="fas fa-shopping-bag"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card p-3 h-100 shadow-sm border-0 bg-warning text-dark dashboard-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <p class="mb-1 opacity-75">Total Products</p>
+                    <h3 class="fw-bold m-0 counter" data-target="{{ total_products }}">{{ total_products }}</h3>
+                </div>
+                <div class="stats-card-icon fs-1 opacity-50">
+                    <i class="fas fa-box"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row my-4">
+    <!-- Chart -->
+    <div class="col-lg-8">
+        <div class="card shadow-sm mb-4 border-0">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 fw-bold">Sales Overview</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="salesChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Orders -->
+    <div class="col-lg-4">
+        <div class="card shadow-sm h-100 border-0">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 fw-bold">Recent Orders</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 align-middle text-nowrap">
+                        <thead class="table-light">
+                            <tr>
+                                <th scope="col" class="ps-4">Order #</th>
+                                <th scope="col">Amount</th>
+                                <th scope="col">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for order in recent_orders %}
+                            <tr>
+                                <td class="ps-4 fw-bold">{{ order.order_number }}</td>
+                                <td>₹{{ order.total_amount }}</td>
+                                <td><span class="badge bg-success rounded-pill">Completed</span></td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="3" class="text-center py-3">No orders found.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer bg-white border-0 text-center py-3">
+                <a href="{{ url_for('orders_page') }}" class="text-primary text-decoration-none fw-bold">View All Orders
+                    <i class="fas fa-arrow-right"></i></a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Initialize Flatpickr
+    const fp = flatpickr("#globalDateRange", {
+        mode: "range",
+        dateFormat: "Y-m-d",
+        defaultDate: [
+            new URLSearchParams(window.location.search).get('start_date') || new Date(new Date().setDate(new Date().getDate() - 7)),
+            new URLSearchParams(window.location.search).get('end_date') || new Date()
+        ],
+        onClose: function (selectedDates, dateStr, instance) {
+            if (selectedDates.length === 2) {
+                const start = instance.formatDate(selectedDates[0], "Y-m-d");
+                const end = instance.formatDate(selectedDates[1], "Y-m-d");
+                window.location.href = `/?start_date=${start}&end_date=${end}`;
+            }
+        }
+    });
+
+    function exportData() {
+        const urlParams = new URLSearchParams(window.location.search);
+        let start = urlParams.get('start_date');
+        let end = urlParams.get('end_date');
+
+        if (!start || !end) {
+            const dates = fp.selectedDates;
+            if (dates.length === 2) {
+                start = fp.formatDate(dates[0], "Y-m-d");
+                end = fp.formatDate(dates[1], "Y-m-d");
+            }
+        }
+
+        // Simple CSV export simulation or specific endpoint
+        alert(`Exporting data from ${start || 'all time'} to ${end || 'now'}... (Feature to be implemented on backend if needed, or client-side generation)`);
+    }
+
+    // Chart.js
+    const ctx = document.getElementById('salesChart').getContext('2d');
+
+    // Check for query params to pass to analytics API if we supported it there
+    // For now, analytics API is static or dumb, so we just invoke it.
+    // Ideally we pass params: /api/analytics?start_date=...
+    const urlParams = new URLSearchParams(window.location.search);
+    const apiQuery = urlParams.toString() ? `?${urlParams.toString()}` : '';
+
+    fetch(`/api/analytics${apiQuery}`)
+        .then(response => response.json())
+        .then(data => {
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        label: 'Revenue (₹)',
+                        data: data.data,
+                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                        borderColor: '#3498db',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        fill: true,
+                        pointBackgroundColor: '#fff',
+                        pointBorderColor: '#3498db',
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function (context) {
+                                    return 'Revenue: ₹' + context.parsed.y;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { borderDash: [2, 4], color: '#f0f0f0' },
+                            ticks: {
+                                callback: function (value) { return '₹' + value; }
+                            }
+                        },
+                        x: {
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+        });
+</script>
+{% endblock %}

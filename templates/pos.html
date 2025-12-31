@@ -1,0 +1,341 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row h-100 g-4">
+    <!-- Product Catalog (Left) -->
+    <div class="col-lg-8 d-flex flex-column h-100">
+        <!-- Search and Filter -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="input-group w-50 shadow-sm">
+                <span class="input-group-text bg-body-tertiary border-end-0"><i class="fas fa-search"></i></span>
+                <input type="text" id="posSearch" class="form-control border-start-0 ps-0 bg-body-tertiary"
+                    placeholder="Search menu...">
+            </div>
+        </div>
+
+        <!-- Categories -->
+        <div class="mb-4 overflow-auto py-1" style="white-space: nowrap;">
+            <button class="btn btn-primary rounded-pill px-4 me-2 category-filter active"
+                data-category="all">All</button>
+            {% for cat in categories %}
+            <button class="btn btn-light rounded-pill px-4 me-2 category-filter" data-category="{{ cat }}">{{ cat
+                }}</button>
+            {% endfor %}
+        </div>
+
+        <!-- Grid -->
+        <div class="row g-3 overflow-auto flex-grow-1" style="max-height: 80vh;" id="productGrid">
+            {% for product in products %}
+            <div class="col-6 col-md-4 col-lg-3 product-item" data-category="{{ product.category }}"
+                data-name="{{ product.name }}">
+                <div class="card product-card h-100 border-0 shadow-sm" data-id="{{ product.id }}"
+                    data-name="{{ product.name }}" data-price="{{ product.price }}" data-image="{{ product.image }}">
+                    <div class="position-relative">
+                        <img src="{{ product.image }}" class="card-img-top object-fit-cover" height="150"
+                            alt="{{ product.name }}">
+                        <div
+                            class="card-img-overlay d-flex align-items-end justify-content-center p-2 opacity-0 hover-show">
+                            <!-- Optional overlay content -->
+                        </div>
+                    </div>
+                    <div class="card-body p-3 d-flex flex-column">
+                        <h6 class="card-title fw-bold mb-1 text-truncate">{{ product.name }}</h6>
+                        <div class="d-flex justify-content-between align-items-center mt-auto">
+                            <span class="text-primary fw-bold">₹{{ product.price }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <button class="btn btn-sm btn-outline-secondary rounded-circle"
+                                onclick="updateQtyFromCard({{ product.id }}, -1)">-</button>
+                            <span class="fw-bold small product-qty-display" data-id="{{ product.id }}">0</span>
+                            <button class="btn btn-sm btn-outline-primary rounded-circle"
+                                onclick="updateQtyFromCard({{ product.id }}, 1)">+</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Cart (Right) -->
+    <div class="col-lg-4">
+        <div class="card pos-cart d-flex flex-column h-100 border-0 shadow-lg">
+            <div class="card-header bg-white border-bottom py-3">
+                <h5 class="mb-0 fw-bold">Current Order</h5>
+            </div>
+
+            <!-- Cart Items -->
+            <div class="card-body p-0 overflow-auto flex-grow-1" id="cartItemsContainer">
+                <div class="text-center text-muted mt-5 pt-5" id="emptyCartMsg">
+                    <i class="fas fa-shopping-basket fa-3x mb-3 opacity-50"></i>
+                    <p>Cart is empty</p>
+                </div>
+                <!-- Items injected here via JS -->
+            </div>
+
+            <!-- Footer (Totals & Checkout) -->
+            <div class="card-footer bg-white border-top p-3">
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-secondary">Subtotal</span>
+                    <span class="fw-bold" id="subTotal">₹0.00</span>
+                </div>
+                <div class="d-flex justify-content-between mb-3">
+                    <span class="text-secondary">Tax (5%)</span>
+                    <span class="fw-bold" id="taxVal">₹0.00</span>
+                </div>
+                <div class="d-flex justify-content-between mb-4">
+                    <span class="fs-5 fw-bold">Total</span>
+                    <span class="fs-4 fw-bold text-primary" id="totalVal">₹0.00</span>
+                </div>
+
+                <h6 class="text-muted mb-2 small text-uppercase fw-bold">Payment Method</h6>
+                <div class="row g-2 mb-3">
+                    <div class="col-4">
+                        <button class="btn btn-outline-primary w-100 py-2 payment-method active" data-method="Cash">
+                            <i class="fas fa-money-bill-wave"></i><br><small>Cash</small>
+                        </button>
+                    </div>
+                    <div class="col-4">
+                        <button class="btn btn-outline-primary w-100 py-2 payment-method" data-method="Card">
+                            <i class="fas fa-credit-card"></i><br><small>Card</small>
+                        </button>
+                    </div>
+                    <div class="col-4">
+                        <button class="btn btn-outline-primary w-100 py-2 payment-method" data-method="GPay/UPI">
+                            <i class="fab fa-google-pay"></i><br><small>GPay/UPI</small>
+                        </button>
+                    </div>
+                </div>
+
+                <button class="btn btn-primary w-100 py-3 fw-bold fs-5 shadow-sm" onclick="processCheckout()">
+                    Proceeed to Checkout
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Receipt Modal -->
+<div class="modal fade" id="receiptModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-body text-center p-4">
+                <div class="mb-3 text-success">
+                    <i class="fas fa-check-circle fa-4x"></i>
+                </div>
+                <h5 class="fw-bold mb-1">Order Successful!</h5>
+                <p class="text-muted small mb-4">Thank you for your purchase.</p>
+
+                <div id="receiptContent" class="bg-light p-3 rounded mb-3 text-start font-monospace small text-dark">
+                    <div class="text-center mb-3">
+                        <h6 class="fw-bold m-0">MY SHOP POS</h6>
+                        <small>123 Main Street, City</small><br>
+                        <small id="receiptDate"></small>
+                    </div>
+                    <div class="border-bottom border-secondary mb-2"></div>
+                    <table class="table table-sm table-borderless mb-0">
+                        <tbody id="receiptItemsList">
+                        </tbody>
+                    </table>
+                    <div class="border-bottom border-secondary mb-2 mt-2"></div>
+                    <div class="d-flex justify-content-between">
+                        <span>Subtotal:</span>
+                        <span id="receiptSubTotal"></span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span>Tax (5%):</span>
+                        <span id="receiptTax"></span>
+                    </div>
+                    <div class="d-flex justify-content-between fw-bold fs-6 mt-1">
+                        <span>Total:</span>
+                        <span id="receiptTotal"></span>
+                    </div>
+                    <div class="text-center mt-3">
+                        <small>Order #: <span id="receiptOrderId"></span></small> <br>
+                        <small>Method: <span id="receiptMethod"></span></small>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button class="btn btn-primary w-100" onclick="window.print()">Print Receipt</button>
+                    <button class="btn btn-outline-secondary w-100" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let cart = [];
+    let selectedPayment = 'Cash';
+
+    // Filter Categories
+    $('.category-filter').click(function () {
+        $('.category-filter').removeClass('btn-primary active').addClass('btn-light');
+        $(this).removeClass('btn-light').addClass('btn-primary active');
+
+        const cat = $(this).data('category');
+        if (cat === 'all') {
+            $('.product-item').show();
+        } else {
+            $('.product-item').hide();
+            $(`.product-item[data-category="${cat}"]`).show();
+        }
+    });
+
+    // Search
+    $('#posSearch').on('keyup', function () {
+        const val = $(this).val().toLowerCase();
+        $('.product-item').each(function () {
+            const name = $(this).data('name').toLowerCase();
+            $(this).toggle(name.includes(val));
+        });
+    });
+
+    // Payment Method
+    $('.payment-method').click(function () {
+        $('.payment-method').removeClass('active btn-primary text-white').addClass('btn-outline-primary');
+        $(this).removeClass('btn-outline-primary').addClass('active btn-primary text-white');
+        selectedPayment = $(this).data('method');
+    });
+
+    function updateQtyFromCard(id, change) {
+        // Find product details
+        const card = $(`.product-card[data-id="${id}"]`);
+        const product = {
+            id: id,
+            name: card.data('name'),
+            price: parseFloat(card.data('price')),
+            image: card.data('image')
+        };
+
+        let item = cart.find(i => i.id === id);
+
+        if (!item && change > 0) {
+            cart.push({ ...product, qty: 1 });
+        } else if (item) {
+            item.qty += change;
+            if (item.qty <= 0) {
+                cart = cart.filter(i => i.id !== id);
+            }
+        }
+
+        renderCart();
+    }
+
+    function renderCart() {
+        const container = $('#cartItemsContainer');
+
+        // Update product card counters
+        $('.product-qty-display').text('0');
+        cart.forEach(item => {
+            $(`.product-qty-display[data-id="${item.id}"]`).text(item.qty);
+        });
+
+        if (cart.length === 0) {
+            container.html($('#emptyCartMsg').clone().show());
+            updateTotals(0);
+            return;
+        }
+
+        let html = '';
+        let subtotal = 0;
+
+        cart.forEach(item => {
+            const total = item.price * item.qty;
+            subtotal += total;
+            html += `
+            <div class="cart-item p-3 d-flex align-items-center justify-content-between border-bottom">
+                <div class="d-flex align-items-center">
+                    <img src="${item.image}" class="rounded me-3 object-fit-cover" width="50" height="50">
+                    <div>
+                        <h6 class="mb-0 fw-bold text-truncate" style="max-width: 120px;">${item.name}</h6>
+                        <small class="text-muted">₹${item.price} x ${item.qty}</small>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center">
+                    <div class="btn-group btn-group-sm me-3" role="group">
+                        <button class="btn btn-outline-secondary" onclick="updateQtyFromCard(${item.id}, -1)">-</button>
+                        <button class="btn btn-outline-secondary" disabled>${item.qty}</button>
+                        <button class="btn btn-outline-secondary" onclick="updateQtyFromCard(${item.id}, 1)">+</button>
+                    </div>
+                    <span class="fw-bold me-3">₹${total.toFixed(2)}</span>
+                    <button class="btn btn-link text-danger p-0" onclick="removeFromCart(${item.id})"><i class="fas fa-trash-alt"></i></button>
+                </div>
+            </div>`;
+        });
+
+        container.html(html);
+        updateTotals(subtotal);
+    }
+
+    function removeFromCart(id) {
+        cart = cart.filter(i => i.id !== id);
+        renderCart();
+    }
+
+    function updateTotals(subtotal) {
+        const tax = subtotal * 0.05;
+        const total = subtotal + tax;
+
+        $('#subTotal').text('₹' + subtotal.toFixed(2));
+        $('#taxVal').text('₹' + tax.toFixed(2));
+        $('#totalVal').text('₹' + total.toFixed(2));
+    }
+
+    function processCheckout() {
+        if (cart.length === 0) {
+            alert('Cart is empty!');
+            return;
+        }
+
+        const orderData = {
+            items: cart.map(item => ({
+                product_id: item.id,
+                quantity: item.qty,
+                price: item.price
+            })),
+            payment_method: selectedPayment
+        };
+
+        $.ajax({
+            url: '/api/orders',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(orderData),
+            success: function (res) {
+                // Generate Receipt Items
+                let itemsHtml = '';
+                let subTotal = 0;
+                cart.forEach(item => {
+                    const t = item.price * item.qty;
+                    subTotal += t;
+                    itemsHtml += `
+                        <tr>
+                            <td class="text-dark">${item.name} <br> <small class="text-muted">${item.qty} x ₹${item.price}</small></td>
+                            <td class="text-end text-dark">₹${t.toFixed(2)}</td>
+                        </tr>
+                    `;
+                });
+                $('#receiptItemsList').html(itemsHtml);
+                $('#receiptDate').text(new Date().toLocaleString());
+
+                $('#receiptSubTotal').text('₹' + subTotal.toFixed(2));
+                $('#receiptTax').text('₹' + (subTotal * 0.05).toFixed(2));
+
+                $('#receiptOrderId').text(res.order_number);
+                $('#receiptMethod').text(selectedPayment);
+                $('#receiptTotal').text($('#totalVal').text());
+                $('#receiptModal').modal('show');
+                cart = [];
+                renderCart();
+            },
+            error: function () {
+                alert('Checkout failed!');
+            }
+        });
+    }
+</script>
+{% endblock %}
