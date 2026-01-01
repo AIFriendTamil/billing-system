@@ -287,10 +287,47 @@
 
     function processCheckout() {
         if (cart.length === 0) {
-            alert('Cart is empty!');
+            Swal.fire({
+                icon: 'warning',
+                title: 'Cart is Empty',
+                text: 'Please add items to cart before checkout',
+                confirmButtonColor: '#3498db'
+            });
             return;
         }
 
+        // Calculate totals for confirmation
+        const subtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+        const tax = subtotal * 0.05;
+        const total = subtotal + tax;
+
+        // Show confirmation dialog
+        Swal.fire({
+            title: 'Confirm Order',
+            html: `
+                <div class="text-start">
+                    <p><strong>Items:</strong> ${cart.length}</p>
+                    <p><strong>Subtotal:</strong> ₹${subtotal.toFixed(2)}</p>
+                    <p><strong>Tax (5%):</strong> ₹${tax.toFixed(2)}</p>
+                    <p><strong>Total:</strong> ₹${total.toFixed(2)}</p>
+                    <p><strong>Payment Method:</strong> ${selectedPayment}</p>
+                </div>
+            `,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#3498db',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Yes, Place Order',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // User confirmed, proceed with order
+                placeOrder();
+            }
+        });
+    }
+
+    function placeOrder() {
         const orderData = {
             items: cart.map(item => ({
                 product_id: item.id,
@@ -328,12 +365,29 @@
                 $('#receiptOrderId').text(res.order_number);
                 $('#receiptMethod').text(selectedPayment);
                 $('#receiptTotal').text($('#totalVal').text());
-                $('#receiptModal').modal('show');
+
+                // Show success message
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Order Placed!',
+                    text: `Order #${res.order_number} has been created successfully`,
+                    confirmButtonColor: '#3498db',
+                    timer: 2000,
+                    timerProgressBar: true
+                }).then(() => {
+                    $('#receiptModal').modal('show');
+                });
+
                 cart = [];
                 renderCart();
             },
             error: function () {
-                alert('Checkout failed!');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Checkout Failed',
+                    text: 'There was an error processing your order. Please try again.',
+                    confirmButtonColor: '#3498db'
+                });
             }
         });
     }
