@@ -242,4 +242,4 @@ if __name__ == '__main__':
             db.session.add(Product(name='Cola', category='Beverage', price=60.0, image='https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3'))
             db.session.commit()
             
-    app.run(debug=True, port=5000)
+    app.run(host='0.0.0.0', port=5000, debug=False)
