@@ -294,35 +294,23 @@ def analytics(db: Session = Depends(get_db)):
     if not labels:
         labels = ["No Data"]
         data = [0]
+        
+    return jsonify({
+        'labels': labels,
+        'data': data
+    })
 
-    return {"labels": labels, "data": data}
-
-
-# ── Startup ────────────────────────────────────────────────────────────────────
-@app.on_event("startup")
-def startup():
-    os.makedirs("instance", exist_ok=True)
-    Base.metadata.create_all(bind=engine)
-    db = SessionLocal()
-    try:
-        if not db.query(Product).first():
-            db.add(Product(
-                name="Chicken Burger", category="Fast Food", price=250.0,
-                image="https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
-            ))
-            db.add(Product(
-                name="Veg Pizza", category="Pizza", price=400.0,
-                image="https://images.unsplash.com/photo-1513104890138-7c749659a591?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
-            ))
-            db.add(Product(
-                name="Cola", category="Beverage", price=60.0,
-                image="https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
-            ))
-            db.commit()
-    finally:
-        db.close()
-
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)
+if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
+        if not Product.query.first():
+            # Seed with INR prices approx
+            # Chicken Burger 5.5 -> 250 INR
+            # Pizza 8.0 -> 400 INR
+            # Cola 1.5 -> 60 INR
+            db.session.add(Product(name='Chicken Burger', category='Fast Food', price=250.0, image='https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3'))
+            db.session.add(Product(name='Veg Pizza', category='Pizza', price=400.0, image='https://images.unsplash.com/photo-1513104890138-7c749659a591?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3'))
+            db.session.add(Product(name='Cola', category='Beverage', price=60.0, image='https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3'))
+            db.session.commit()
+            
+    app.run(host='0.0.0.0', port=5000, debug=False)
